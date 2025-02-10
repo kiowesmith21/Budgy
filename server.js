@@ -1,8 +1,15 @@
 const express = require('express')
 const app = express()
 const port = 3000
+const cors = require("cors");
+const corsOptions = {
+    origin: "*", 
+    method: "GET,PUT,POST,DELETE",
+    allowedHeaders:"*"
+}
 
 app.use(express.json());
+app.use(cors(corsOptions));
 
 //"db"
 const envelopes = {

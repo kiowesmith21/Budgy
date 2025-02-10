@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budgy: The Envelope Budgeting Widget</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 700px;
+            margin-top: 20px;
+        }
+        .envelope {
+            background: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .envelope .budget {
+            font-weight: bold;
+            color: green;
+        }
+        .btn-sm {
+            margin-left: 5px;
+        }
+        .budgy-mascot {
+            width: 100px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <img src="https://thumb.ac-illust.com/12/1235dfb3429dd9fd5c1b9b40ef973ab8_t.jpeg" alt="Budgy the Carrier Pigeon" class="budgy-mascot">
+        <h2>Budgy: The Envelope Budgeting Widget</h2>
+
+        <h4 class="mt-3">Your Budget Envelopes</h4>
+        <div id="envelopes-list"></div>
+
+        <hr>
+
+        <h4>Create New Envelope</h4>
+        <input type="text" id="new-envelope-name" class="form-control mb-2" placeholder="Envelope Name">
+        <input type="number" id="new-envelope-budget" class="form-control mb-2" placeholder="Budget Amount">
+        <button class="btn btn-primary" onclick="createEnvelope()">Create</button>
+
+        <hr>
+
+        <h4>Update Envelope</h4>
+        <input type="text" id="update-envelope-name" class="form-control mb-2" placeholder="Envelope Name">
+        <input type="number" id="update-envelope-spent" class="form-control mb-2" placeholder="Amount Spent">
+        <button class="btn btn-warning" onclick="updateEnvelope()">Update</button>
+
+        <hr>
+
+        <h4>Transfer Funds</h4>
+        <input type="text" id="transfer-from" class="form-control mb-2" placeholder="From Envelope">
+        <input type="text" id="transfer-to" class="form-control mb-2" placeholder="To Envelope">
+        <input type="number" id="transfer-amount" class="form-control mb-2" placeholder="Amount">
+        <button class="btn btn-success" onclick="transferFunds()">Transfer</button>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:3000/envelopes";
+
+        async function fetchEnvelopes() {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+            const envelopesList = document.getElementById("envelopes-list");
+            envelopesList.innerHTML = "";
+
+            if (Object.keys(data).length === 0) {
+                envelopesList.innerHTML = "<p>No envelopes yet. Create one!</p>";
+                return;
+            }
+
+            for (const [name, { budget }] of Object.entries(data)) {
+                const envelopeDiv = document.createElement("div");
+                envelopeDiv.className = "envelope";
+                envelopeDiv.innerHTML = `
+                    <span><strong>${name}</strong></span>
+                    <span class="budget">$${budget}</span>
+                    <button class="btn btn-danger btn-sm" onclick="deleteEnvelope('${name}')">Delete</button>
+                `;
+                envelopesList.appendChild(envelopeDiv);
+            }
+        }
+
+        async function createEnvelope() {
+            const name = document.getElementById("new-envelope-name").value;
+            const budget = document.getElementById("new-envelope-budget").value;
+            if (!name || !budget) return alert("Please enter a name and budget.");
+
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, budget: parseFloat(budget) })
+            });
+
+            if (response.ok) {
+                alert(`Envelope "${name}" created!`);
+                fetchEnvelopes();
+            } else {
+                alert(await response.text());
+            }
+        }
+
+        async function updateEnvelope() {
+            const name = document.getElementById("update-envelope-name").value;
+            const spent = document.getElementById("update-envelope-spent").value;
+            if (!name || !spent) return alert("Please enter an envelope name and amount spent.");
+
+            const response = await fetch(`${API_URL}/${name}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ spent: parseFloat(spent) })
+            });
+
+            if (response.ok) {
+                alert(`Envelope "${name}" updated!`);
+                fetchEnvelopes();
+            } else {
+                alert(await response.text());
+            }
+        }
+
+        async function transferFunds() {
+            const from = document.getElementById("transfer-from").value;
+            const to = document.getElementById("transfer-to").value;
+            const amount = document.getElementById("transfer-amount").value;
+            if (!from || !to || !amount) return alert("Please enter valid transfer details.");
+
+            const response = await fetch(`${API_URL}/transfer/${from}/${to}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ amount: parseFloat(amount) })
+            });
+
+            if (response.ok) {
+                alert(`Transferred $${amount} from "${from}" to "${to}"!`);
+                fetchEnvelopes();
+            } else {
+                alert(await response.text());
+            }
+        }
+
+        async function deleteEnvelope(name) {
+            const response = await fetch(`${API_URL}/${name}`, { method: "DELETE" });
+            if (response.ok) {
+                alert(`Envelope "${name}" deleted!`);
+                fetchEnvelopes();
+            } else {
+                alert(await response.text());
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", fetchEnvelopes);
+    </script>
+
+</body>
+</html>
